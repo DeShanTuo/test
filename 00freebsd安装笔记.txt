@@ -1,0 +1,370 @@
+1.安装freebsd13.1
+/usr/share/vt/fonts #终端字体
+vidcontrol -f terminus-b32.fnt
+vidfont 选择终端字体Terminus BSD Console,size 32
+VT控制台分辨率调整
+使用KMS驱动程序（i915kms或radeonkms）：可以通过将其放入/boot/loader.conf来设置模式：
+kern.vt.fb.default_mode="1024x768"
+
+2.修改update源,pkg源
+#vi /etc/freebsd-update.conf修改update源
+ServerName update.freeBSD.cn 已挂
+#vi /etc/pkg/FreeBSD.conf修改pkg源
+url: "pkg+http://pkg.FreeBSD.cn/${ABI}/latest", 已挂
+url: "http://mirrors.ustc.edu.cn/freebsd-pkg/${ABI}/latest",
+
+3.升级freebsd
+#freebsd-update fetch install
+#freebsd-update upgrade -r 13.2-RELEASE
+#freebsd-update rollback 回滚到上一组修改
+
+4.安装pkg
+#pkg
+#pkg -vv
+#pkg update -f
+
+5.安装gitup
+#pkg install gitup
+#vi /usr/local/etc/gitup.conf修改
+“host” :"git.freebsd.cn", 已挂
+
+6.升级ports，src
+#gitup ports
+#gitup release
+
+7.安装常用工具
+#pkg install lscpu lsblk pciutils usbutils sudo dmidecode sysinfo hwstat
+
+8.安装ntfs，exfat驱动
+#pkg install fusefs-ntfs fusefs-exfat
+#sysrc kld_list+="fusefs"
+#ntfs-3g /dev/da0s1 /mnt/usb
+#mount.exfat /dev/da0s1 /mnt/usb
+#mount -t ext2fs /dev/nvd0p4 /mnt/ext4
+
+9.安装显卡驱动
+#pkg install drm-kmod
+sysrc kld_list+="i915kms"
+#视频硬解 ???
+# pkg install xf86-video-intel libva-intel-driver ???
+#如果发现 CPU 使用率高或高清视频过度撕裂，安装 multimedia/libva-intel-driver可能会有所帮助。
+# pkg install libva-intel-driver mesa-libs mesa-dri
+###################################################################################
+pkg info |grep libva
+libva-2.19.0                   VAAPI wrapper and dummy driver
+libva-intel-driver-2.4.1_2     VAAPI legacy driver for Intel GMA 4500 (Gen4) to UHD 630 (Gen9.5)
+libva-intel-hybrid-driver-1.0.2_3 Hybrid VP8 encoder and VP9 decoder for Intel GPUs
+libva-intel-media-driver-22.4.3_1 VAAPI driver for Intel HD 5000 (Gen8) or newer
+xf86-video-intel-2.99.917.923,1 X.Org legacy driver for Intel integrated graphics chipsets
+pkg info |grep mesa
+mesa-dri-22.3.7_3              OpenGL hardware acceleration drivers for DRI2+
+mesa-libs-22.3.7_2             OpenGL libraries that support GLX and EGL clients
+
+10.安装xorg，noto-sans-sc,noto-serif-sc字体
+#pkg install xorg noto-sans-sc noto-serif-sc
+手动cp字体后执行如下命令
+fc-cache -fv
+mkfontscale /usr/local/share/fonts/noto
+mkfontdir /usr/local/share/fonts/noto
+
+11.安装lightdm显示管理器
+#pkg install lightdm lightdm-gtk-greeter
+#sysrc lightdm_enable="YES"
+
+12.安装cinnamon,mate,lxqt,budgie,xfce桌⾯
+#pkg install cinnamon
+#pkg install mate
+#pkg install lxqt
+#pkg install budgie
+#pkg install xfce xdg-user-dirs
+#kde,xfce,mate,lxqt已验证无需/proc。cinnamon,gnome待验证。 20230901 freebsd13.2
+
+13.安装中文输入法
+## pkg install zh-ibus-libpinyin ibus zh-ibus-pinyin 
+ibus-setup
+fcitx5:
+# pkg install fcitx5 fcitx5-qt5 fcitx5-qt6 fcitx5-gtk2 fcitx5-gtk3 fcitx5-gtk4 fcitx5-configtool zh-fcitx5-chinese-addons
+
+14.配置X11
+#sysrc dbus_enable="YES"
+#vi /etc/fstab添加如下内容
+proc	/proc	procfs	rw	0	0
+#vi .xinitrc添加如下内容
+export LANG=zh_CN.UTF-8
+#ibus
+export XIM=ibus
+export GTK_IM_MODULE=ibus
+export QT_IM_MODULE=ibus
+export XMODIFIERS=@im=ibus
+export XIM_PROGRAM="ibus-daemon"
+export XIM_ARGS="--daemonize --xim"
+#fcitx5
+export XMODIFIERS='@im=fcitx'
+export GTK_IM_MODULE=fcitx/xim
+export QT_IM_MODULE=fcitx
+
+###XFCE
+#/usr/local/etc/xdg/xfce4/xinitrc
+#exec ck-launch-session xfce4-session
+#exec xfce4-session
+###kde5
+#exec ck-launch-session startplasma-x11
+#exec startplasma-x11
+###mate
+#exec ck-launch-session mate-session
+#exec mate-session
+###lxqt
+#exec ck-launch-session startlxqt
+#exec startlxqt
+###cinnamon
+#exec ck-launch-session cinnamon-session
+#exec cinnamon-session
+###gnome
+#exec ck-launch-session gnome-session
+#exec gnome-session
+###budgie
+#exec ck-launch-session budgie-desktop
+
+15.桌面应用
+#pkg install chromium
+#pkg install zh_CN-libreoffice
+#pkg install mousepad ristretto 
+
+16.多媒体
+#pkg install vlc
+#pkg install mpv
+#pkg install audacious
+#pkg install audacious-plugins
+
+17.usb网络共享
+# usb连接手机，在手机上打开usb网络共享，系统会自动出现网卡-ue0
+# dhclient ue0 即可获取IP地址
+# freebsd13.1、13.2，小米手机测试通过
+
+18.查看硬盘
+查看识别到的硬盘
+dmesg | grep sector
+sysctl kern.disks
+camcontrol devlist(scsi盘适用）
+nvmecontrol devlist
+nvmecontrol identify nvme0
+geom disk list
+列出当前分区信息
+gpart show
+lsblk
+查看分区使用情况
+df -Th
+查看硬盘大小,读写速度寻道时间
+diskinfo -vt /dev/ada0        //da0是整个磁盘名
+diskinfo -vt /dev/ada0p1       //da0a是磁盘分区
+硬盘IO
+gstat
+iosta
+systat -iostat
+
+19.查看电池寿命
+检查笔记本电脑电池寿命状态命令
+sysctl命令：sysctl实用程序检索内核状态。
+sysctl hw.acpi.battery
+acpiconf命令：acpiconf命令允许用户控制ACPI电源管理功能并查询笔记本电脑的电池状态。
+acpiconf -i 0
+acpiconf -i 0 | grep capacity
+apm命令：apm实用程序控制Intel/Microsoft APM(高级电源管理)BIOS，并在便携式PC上显示APM的当前状态。
+apm
+hwstat命令：另一个显示CPU温度和电池信息的命令行工具。
+hwstat命令不是系统自带的命令。
+pkg install hwstat
+然后执行以下命令查看CPU温度和电池信息：
+hwstat
+
+20.
+配置时区
+tzsetup  bsdconfig 
+# cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+手动同步时间
+# ntpdate time.windows.com
+
+21.中文化
+方法1.编辑 etc/login.conf：
+找到 default:\ 这一段，把 :lang=C.UTF-8 修改为 :lang=zh_CN.UTF-8。（会导致VT控制台乱码）
+刷新数据库：# cap_mkdb /etc/login.conf
+
+方法2.vi .shrc （会导致VT控制台乱码）
+文件添加以下内容
+export LANG=zh_CN.UTF-8
+#export LC_CTYPE=zh_CN.UTF-8
+
+方法3.在.profile 中添加以下内容 export LANG=zh_CN.UTF-8 （会导致VT控制台乱码）
+csh shell用户修改vi .cshrc （会导致VT控制台乱码）
+文件添加以下内容
+setenv LANG zh_CN.UTF-8
+#setenv LC_CTYPE zh_CN.UTF-8
+
+X桌面中文化
+vi ~/.xinitrc 加入以下内容
+#sh shell
+export LANG=zh_CN.UTF-8
+#LANG=zh_CN.UTF-8; export LANG
+#csh shell
+setenv LANG zh_CN.UTF-8
+
+22.System INIT管理服务
+FreeBSD 使用传统的 BSD INIT 管理系统服务。
+启动服务：# service xxx start
+停止服务：# service xxx stop
+重启服务：# service xxx restart
+出于安全性考虑，服务安装以后默认是禁用状态，以上命令是无法执行的，需要先开启服务：
+# ee /etc/rc.conf
+添加一行，xxx_enable="YES"，xxx表示服务名称（这里只是举例，实际上可以是 nginx samba 等），这是固定格式：xxx_enable="YES"
+也可以用命令添加：
+sysrc xxx_enable="YES"
+服务所对应的脚本路径是：#/usr/local/etc/rc.d/
+当然也可以直接调用 /etc/rc.d/ 和 /usr/local/etc/rc.d/ 下的那些脚本。
+# /usr/local/etc/rc.d/xxx reload
+# /usr/local/etc/rc.d/xxx stop
+如果 rc.conf 中并没有启用某项服务，但想临时启动它，那么可以这样：
+# service xxx onestart
+# service xxx onestop
+
+23.efibootmgr
+efibootmgr -c -d /dev/sdb -p 1 -l /EFI/freebsd/loader.efi -L "FreeBSD"
+efibootmgr -c -d /dev/ada0 -p 1 -l /boot/efi/EFI/freebsd/loader.efi -L "FreeBSD"
+efibootmgr -c -d /dev/ada0 -p 1 -l /boot/efi/EFI/arch/grubx64.efi -L arch
+efibootmgr --create --disk /dev/ada0 --part 1 --loader /boot/efi/EFI/arch/grubx64.efi --label arch
+EFI 可小写，“FreeBSD” 引号可以不写
+
+24.wifi
+1.识别无线适配器。
+% sysctl net.wlan.devices
+如果未列出无线适配器，则可能需要额外的内核模块，或者它可能是 FreeBSD 不支持的型号。
+此示例显示 Atherosath0无线适配器。
+将此网络的条目添加到/etc/wpa_supplicant.conf。如果该文件不存在，请创建它。将myssid和mypsk替换为网络管理员提供的 SSID 和 PSK。
+network={
+	ssid="myssid"
+	psk="mypsk"
+}
+
+2.将条目添加到/etc/rc.conf以在启动时配置网络：
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA SYNCDHCP"
+
+3.重启电脑，或者重启网络服务连接网络：
+# reboot
+# service netif restart
+
+4.如何查找接入点
+要扫描可用网络，此请求可能需要一些时间才能完成，因为它要求系统切换到每个可用的无线频率并探测可用的接入点。只有超级用户可以启动扫描：
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+service netif start
+
+25.杂项
+FreeBSD查看，加载内核模块
+kldstat
+kldload xxx
+显示内核加载的模块
+kldstat -v
+显示指定模块
+klsdstat -m ether
+
+freeBSD硬件信息
+dmesg
+sysctl hw
+显示PCI总线设备信息
+pciconf -lv 
+lspci
+
+freeBSD sysctl 命令的作用
+freeBSD的sysctl命令用于查看和修改系统的参数，包括内核参数、内存分配等。
+它使用树形结构表示系统参数，可以查看和修改这些参数的值。sysctl命令的格式如下：
+sysctl [-n] [-w] [-q] [-e] [-i] [-X] [-N] [-d] [-f filename] [name[=value] ...]
+
+systat 能实时查看各种信息
+systat -pigs 默认值CPU
+systat -iostat 硬盘IO
+systat -swap 交换分区
+systat -mbufs 网络缓冲区
+systat -vmstat 虚拟内存
+systat -netstat 网络
+systat -icmp ICMP协议
+systat -ip IP协议
+systat -tcp TCP协议
+systat -ifstat 网卡
+
+即插即用设备
+pnpinfo
+
+显示设备占用的IRQ和内存地址
+devinfo -u
+
+cpu
+sysctl -a|grep cpu
+sysctl -a|grep sched 查看使用的调度器，我编译的是ULE
+
+虚拟内存
+vmstat
+
+硬盘
+gstat
+systat -iostat
+iostat
+
+网卡
+ifconfig
+systat -ifstat
+
+网络
+netstat 
+sockstat
+tcpdump
+trafshow
+systat -mbufs
+systat -icmp
+systat -ip
+systat -tcp
+
+reebsd下查看内存
+1、dmesg | grep -i mem
+cat /var/log/dmesg.boot | grep -i mem
+free
+2、sysctl -a | grep hw.physmem
+
+查看CPU信息
+freebsd# cat /var/run/dmesg.boot |grep CPU 可以查看 cpu信息
+sysctl hw.model 看cpuid
+sysctl machdep.tsc_freq 看cpu频率
+
+查看服务器型号
+#dmidecode|grep “System Information” -A9|egrep “Manufacturer|Product|Serial”
+查看cpu
+sysctl -a | egrep -i ‘hw.machine|hw.model|hw.ncpu’
+查看总的物理内存
+sysctl -a | grep hw.physmem
+查看网卡型号芯片
+pciconf -a -lv nic(因各设备网卡名称不通，故网卡名称需按照实际情况进行更改)
+
+查看服务器的cpu配置
+# dmesg | grep CPU
+CPU: Intel(R) Core(TM) i3 CPU       M 380  @ 2.53GHz (2527.07-MHz K8-class CPU)
+FreeBSD/SMP: Multiprocessor System Detected: 4 CPUs
+cpu0: <ACPI CPU> on acpi0
+cpu1: <ACPI CPU> on acpi0
+cpu2: <ACPI CPU> on acpi0
+cpu3: <ACPI CPU> on acpi0
+
+查看服务器的内存
+# dmesg | grep memory
+real memory  = 524288000 (500 MB)
+avail memory = 481828864 (459 MB)
+
+查看网络流量
+# systat -if 2      //每2秒刷新一次，显示Traffic流量平均值，Peak峰值，Total总流量
+                    /0   /1   /2   /3   /4   /5   /6   /7   /8   /9   /10
+     Load Average   
+      Interface           Traffic               Peak                Total
+            em0  in      0.087 KB/s          0.496 KB/s           28.029 MB
+                 out     0.374 KB/s          0.579 KB/s            4.217 MB
+
+20230905
+
+
